@@ -2,7 +2,6 @@
 //CSC 306
 //3/24/2020
 //Main file for HW5
-
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
@@ -55,7 +54,6 @@ class SyntaxAnalyzer{
         // variables and datatypes.
 };
 SyntaxAnalyzer::SyntaxAnalyzer(istream& infile){
-    cout << "In SYNTAXANALYZER" << endl;
     string line, tok, lex;
     int pos;
     getline_safe(infile, line);
@@ -74,7 +72,6 @@ SyntaxAnalyzer::SyntaxAnalyzer(istream& infile){
 }
 
 bool SyntaxAnalyzer::parse(){
-    cout << "In PARSE" << endl;
     if (vdec()){
         if (*tokitr == "t_begin"){
             tokitr++;
@@ -114,7 +111,7 @@ bool SyntaxAnalyzer::parse(){
 }
 
 bool SyntaxAnalyzer::vdec(){
-    cout << "In VDEC" << endl;
+
     if (*tokitr != "t_var")
         return true;
     else{
@@ -136,7 +133,6 @@ bool SyntaxAnalyzer::vdec(){
 }
 
 int SyntaxAnalyzer::vars(){
-    cout << "In VARS" << endl;
     int result = 0;  // 0 - valid, 1 - done, 2 - error
     string temp;
     if (*tokitr == "t_integer"){
@@ -172,7 +168,6 @@ int SyntaxAnalyzer::vars(){
 }
 
 bool SyntaxAnalyzer::stmtlist(){
-    cout << "In STMTLIST" << endl;
     int result = stmt();
     while (result == 1){
         result = stmt();
@@ -183,7 +178,6 @@ bool SyntaxAnalyzer::stmtlist(){
         return true;
 }
 int SyntaxAnalyzer::stmt(){
-    cout << "In STMT" << endl;
 	if (*tokitr == "t_if"){
         tokitr++; lexitr++;
         if (ifstmt()) return 1;
@@ -215,37 +209,32 @@ int SyntaxAnalyzer::stmt(){
 }
 
 bool SyntaxAnalyzer::ifstmt(){
-    cout << "In IFSTMT" << endl;
-    if(*tokitr == "s_lparen"){
-        tokitr++;
-        lexitr++;
-        if(expr()){
-            if(*tokitr == "s_rparen"){
-                tokitr++;
-                lexitr++;
-                if(*tokitr == "t_then"){
-                    tokitr++; lexitr++;
-                    if(stmtlist()){
-                        if(elsepart()){
-                          if(*tokitr == "t_end"){
-                            tokitr++; lexitr++;
-                                if(*tokitr == "t_if"){
-                                    tokitr++; lexitr++;
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+	if(*tokitr == "s_lparent"){
+		tokitr++; lexitr++;
+		if(expr()){
+			if(*tokitr == "s_rparen"){
+				tokitr++; lexitr++;
+				if(*tokitr == "t_then"){
+					tokitr++; lexitr++;
+					if(stmtlist()){
+						if(elsepart()){
+							if(*tokitr == "t_end"){
+								tokitr++; lexitr++;
+								if(*tokitr == "t_if"){
+									tokitr++; lexitr++;
+									return true;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 	return false;
-    // we will write this together in class
 }
 
 bool SyntaxAnalyzer::elsepart(){
-    cout << "In ELSEPART" << endl;
     if (*tokitr == "t_else"){
         tokitr++; lexitr++;
         if (stmtlist())
@@ -257,18 +246,27 @@ bool SyntaxAnalyzer::elsepart(){
 }
 
 bool SyntaxAnalyzer::whilestmt(){
-    cout << "In WHILESTMT" << endl;
 	return true;
 	// write this function
 }
 
+// Written by Matthew Manuel
 bool SyntaxAnalyzer::assignstmt(){
-    cout << "In ASSIGNSTMT" << endl;
-	return true;
-    // write this function
+	if(*tokitr == "t_id"){
+		tokitr++; lexitr++;
+		if(*tokitr == "t_equals"){
+			tokitr++; lexitr++;
+			if(expr()){
+				if(*tokitr == "t_semi"){
+					tokitr++; lexitr++;
+					return true;
+				}
+			}
+		}
+	}
+	return false;
 }
 bool SyntaxAnalyzer::inputstmt(){
-    cout << "In INPUTSTMT" << endl;
     if (*tokitr == "s_lparen"){
         tokitr++; lexitr++;
         if (*tokitr == "t_id"){
@@ -282,14 +280,30 @@ bool SyntaxAnalyzer::inputstmt(){
     return false;
 }
 
+// Written by Matthew Manuel
 bool SyntaxAnalyzer::outputstmt(){
-    cout << "In OUTPUTSTMT" << endl;
-	return true;
-	// write this function
+	if(*tokitr == "t_output"){
+		tokitr++; lexitr++;
+		if(*tokitr == "s_lparen"){
+			tokitr++; lexitr++;
+			if(expr()){ 					// Output an expression
+				if(*tokitr == "s_rparen"){ // Check if output stmt closed
+					tokitr++; lexitr++;
+					return true;
+				}
+			}
+			else if(*tokitr == "t_string"){ // Output a string
+				if(*tokitr == "s_rparen"){ // Check if output stmt closed
+					tokitr++; lexitr++;
+					return true;
+				}
+			}
+		}
+	}
+	return false;
 }
 
 bool SyntaxAnalyzer::expr(){
-    cout << "In EXPR" << endl;
     if (simpleexpr()){
 		if (relop()){
 			if (simpleexpr())
@@ -306,13 +320,19 @@ bool SyntaxAnalyzer::expr(){
 }
 
 bool SyntaxAnalyzer::simpleexpr(){
-    cout << "In SIMPLEEXPR" << endl;
-	return true;
-    // write this function
+	// Structure: TERM {ARITHOP | RELOP TERM}
+	// meaning one of 4 things at minimum. Let's use some ints as an example:
+	// 1) 2 			TERM (with Empty Set)
+	// 2) 3 / 3 		TERM ARITHOP TERM
+	// 3) 4 == 4 		TERM RELOP TERM
+	// 4) 5 + 5 == 10	TERM ARITHOP TERM RELOP TERM (Multiple terms allowed due to curly brackets)
+	// A TERM could also be an EXPR, but I suppose we just treat this as, for lack of a better word, one term?
+	// Treat, say, the TERM 10 as equivalent to the EXPR (5 + 5), for example?
+
+	return false;
 }
 
 bool SyntaxAnalyzer::term(){
-    cout << "In TERM" << endl;
     if ((*tokitr == "t_int")
 	|| (*tokitr == "t_str")
 	|| (*tokitr == "t_id")){
@@ -332,7 +352,6 @@ bool SyntaxAnalyzer::term(){
 }
 
 bool SyntaxAnalyzer::logicop(){
-    cout << "In LOGICOP" << endl;
     if ((*tokitr == "s_and") || (*tokitr == "s_or")){
         tokitr++; lexitr++;
         return true;
@@ -342,7 +361,6 @@ bool SyntaxAnalyzer::logicop(){
 }
 
 bool SyntaxAnalyzer::arithop(){
-    cout << "In ARITHOP" << endl;
     if ((*tokitr == "s_mult") || (*tokitr == "s_plus") || (*tokitr == "s_minus")
         || (*tokitr == "s_div")	|| (*tokitr == "s_mod")){
         tokitr++; lexitr++;
@@ -353,7 +371,6 @@ bool SyntaxAnalyzer::arithop(){
 }
 
 bool SyntaxAnalyzer::relop(){
-    cout << "In RELOP" << endl;
     if ((*tokitr == "s_lt") || (*tokitr == "s_gt") || (*tokitr == "s_ge")
         || (*tokitr == "s_eq") || (*tokitr == "s_ne") || (*tokitr == "s_le")){
         tokitr++; lexitr++;
@@ -364,7 +381,6 @@ bool SyntaxAnalyzer::relop(){
 }
 std::istream& SyntaxAnalyzer::getline_safe(std::istream& input, std::string& output)
 {
-    //cout << "in GETLINE SAFE" << endl;
     char c;
     output.clear();
 
@@ -382,12 +398,7 @@ std::istream& SyntaxAnalyzer::getline_safe(std::istream& input, std::string& out
 }
 
 int main(){
-    cout << "help" << endl;
     ifstream infile("lexemes.txt");
-    if(!infile){
-        cout << "File not found" << endl;
-        cout << "Please check file name and / or file location" << endl;
-    }
     SyntaxAnalyzer sa(infile);
     sa.parse();
     return 1;
