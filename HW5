@@ -343,7 +343,7 @@ bool SyntaxAnalyzer::expr(){
 }
 //Written by Chris Logan
 bool SyntaxAnalyzer::simpleexpr(){
-	// Structure: TERM {ARITHOP | RELOP TERM}
+    // Structure: TERM {ARITHOP | RELOP TERM}
 	// meaning one of 4 things at minimum. Let's use some ints as an example:
 	// 1) 2 			TERM (with Empty Set)
 	// 2) 3 / 3 		TERM ARITHOP TERM
@@ -351,6 +351,23 @@ bool SyntaxAnalyzer::simpleexpr(){
 	// 4) 5 + 5 == 10	TERM ARITHOP TERM RELOP TERM (Multiple terms allowed due to curly brackets)
 	// A TERM could also be an EXPR, but I suppose we just treat this as, for lack of a better word, one term?
 	// Treat, say, the TERM 10 as equivalent to the EXPR (5 + 5), for example?
+
+    if(term()){
+        if(arithop()){
+            if(term()){
+                return true;
+            }
+            else{
+                return false;
+            }
+        }
+        else{
+            return true;
+        }
+    }
+    else{
+        return false;
+    }
 
 	return false;
 }
