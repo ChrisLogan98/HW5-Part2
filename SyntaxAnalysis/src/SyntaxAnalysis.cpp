@@ -177,6 +177,7 @@ bool SyntaxAnalyzer::stmtlist(){
     else
         return true;
 }
+
 int SyntaxAnalyzer::stmt(){
 	if (*tokitr == "t_if"){
         tokitr++; lexitr++;
@@ -245,7 +246,29 @@ bool SyntaxAnalyzer::elsepart(){
     return true;   // elsepart can be null
 }
 
+//Written by Chris Logan
 bool SyntaxAnalyzer::whilestmt(){
+    if(*tokitr == "s_lparen"){ //encloses EXPR
+        tokitr++; lexitr++;
+        if(expr()){ //conditions for while
+            if(*tokitr == "s_rparen"){ //encloses EXPR
+                tokitr++; lexitr++;
+                if(*tokitr == "t_loop"){ //actual loop part
+                    tokitr++; lexitr++;
+                    if(stmtlist()){
+                        tokitr++; lexitr++;
+                        if(*tokitr == "t_end"){ //end statement
+                            tokitr++; lexitr++;
+                            if(*tokitr == "t_loop"){ //end of loop
+                                tokitr++; lexitr++;
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 	return true;
 	// write this function
 }
@@ -293,6 +316,7 @@ bool SyntaxAnalyzer::outputstmt(){
 				}
 			}
 			else if(*tokitr == "t_string"){ // Output a string
+				tokitr++; lexitr++;
 				if(*tokitr == "s_rparen"){ // Check if output stmt closed
 					tokitr++; lexitr++;
 					return true;
@@ -318,9 +342,9 @@ bool SyntaxAnalyzer::expr(){
 		return false;
 	}
 }
-
+//Written by Chris Logan
 bool SyntaxAnalyzer::simpleexpr(){
-	// Structure: TERM {ARITHOP | RELOP TERM}
+    // Structure: TERM {ARITHOP | RELOP TERM}
 	// meaning one of 4 things at minimum. Let's use some ints as an example:
 	// 1) 2 			TERM (with Empty Set)
 	// 2) 3 / 3 		TERM ARITHOP TERM
@@ -328,6 +352,23 @@ bool SyntaxAnalyzer::simpleexpr(){
 	// 4) 5 + 5 == 10	TERM ARITHOP TERM RELOP TERM (Multiple terms allowed due to curly brackets)
 	// A TERM could also be an EXPR, but I suppose we just treat this as, for lack of a better word, one term?
 	// Treat, say, the TERM 10 as equivalent to the EXPR (5 + 5), for example?
+
+    if(term()){
+        if(arithop()){
+            if(term()){
+                return true;
+            }
+            else{
+                return false;
+            }
+        }
+        else{
+            return true;
+        }
+    }
+    else{
+        return false;
+    }
 
 	return false;
 }
@@ -398,6 +439,7 @@ std::istream& SyntaxAnalyzer::getline_safe(std::istream& input, std::string& out
 }
 
 int main(){
+    cout << "Begin program" << endl;
     ifstream infile("lexemes.txt");
     SyntaxAnalyzer sa(infile);
     sa.parse();
