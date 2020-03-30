@@ -440,6 +440,10 @@ std::istream& SyntaxAnalyzer::getline_safe(std::istream& input, std::string& out
 int main(){
     cout << "Begin program" << endl;
     ifstream infile("lexemes.txt");
+    ifstream infile("lexemes.txt");
+    if(!infile){
+        cout << "ERROR - FILE NOT FOUND" << endl;
+    }
     SyntaxAnalyzer sa(infile);
     sa.parse();
     return 1;
