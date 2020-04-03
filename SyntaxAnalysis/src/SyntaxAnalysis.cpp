@@ -38,6 +38,7 @@ class SyntaxAnalyzer{
         bool logicop();
         bool arithop();
         bool relop();
+        int haveVariable();
         std::istream& getline_safe(std::istream& input, std::string& output);
     public:
         SyntaxAnalyzer(istream& infile);
@@ -107,7 +108,6 @@ bool SyntaxAnalyzer::parse(){
     	cout << "bad var list" << endl;
     }
     return false;
-
 }
 
 bool SyntaxAnalyzer::vdec(){
@@ -177,6 +177,7 @@ bool SyntaxAnalyzer::stmtlist(){
     else
         return true;
 }
+
 int SyntaxAnalyzer::stmt(){
 	if (*tokitr == "t_if"){
         tokitr++; lexitr++;
@@ -189,12 +190,13 @@ int SyntaxAnalyzer::stmt(){
         else return 0;
     }
     else if (*tokitr == "t_id"){  // assignment starts with identifier
+		haveVariable();
         tokitr++; lexitr++;
-        cout << "t_id" << endl;
         if (assignstmt()) return 1;
         else return 0;
     }
     else if (*tokitr == "t_input"){
+    	haveVariable();
         tokitr++; lexitr++;
         if (inputstmt()) return 1;
         else return 0;
@@ -245,25 +247,45 @@ bool SyntaxAnalyzer::elsepart(){
     return true;   // elsepart can be null
 }
 
+//Written by Chris Logan
 bool SyntaxAnalyzer::whilestmt(){
+    if(*tokitr == "s_lparen"){ //encloses EXPR
+        tokitr++; lexitr++;
+        if(expr()){ //conditions for while
+            if(*tokitr == "s_rparen"){ //encloses EXPR
+                tokitr++; lexitr++;
+                if(*tokitr == "t_loop"){ //actual loop part
+                    tokitr++; lexitr++;
+                    if(stmtlist()){
+                        tokitr++; lexitr++;
+                        if(*tokitr == "t_end"){ //end statement
+                            tokitr++; lexitr++;
+                            if(*tokitr == "t_loop"){ //end of loop
+                                tokitr++; lexitr++;
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 	return true;
 	// write this function
 }
 
 // Written by Matthew Manuel
 bool SyntaxAnalyzer::assignstmt(){
-	if(*tokitr == "t_id"){
+	if(*tokitr == "s_assign"){
 		tokitr++; lexitr++;
-		if(*tokitr == "t_equals"){
-			tokitr++; lexitr++;
-			if(expr()){
-				if(*tokitr == "t_semi"){
-					tokitr++; lexitr++;
-					return true;
-				}
+		if(expr()){
+			if(*tokitr == "s_semi"){
+				tokitr++; lexitr++;
+				return true;
 			}
 		}
 	}
+	cout << "Assignment failed." << endl;
 	return false;
 }
 bool SyntaxAnalyzer::inputstmt(){
@@ -282,24 +304,26 @@ bool SyntaxAnalyzer::inputstmt(){
 
 // Written by Matthew Manuel
 bool SyntaxAnalyzer::outputstmt(){
-	if(*tokitr == "t_output"){
+	if(*tokitr == "s_lparen"){
 		tokitr++; lexitr++;
-		if(*tokitr == "s_lparen"){
-			tokitr++; lexitr++;
-			if(expr()){ 					// Output an expression
-				if(*tokitr == "s_rparen"){ // Check if output stmt closed
-					tokitr++; lexitr++;
-					return true;
-				}
+		if(expr()){ 					// Output an expression
+			if(*tokitr == "s_rparen"){ // Check if output stmt closed
+				tokitr++; lexitr++;
+				return true;
 			}
-			else if(*tokitr == "t_string"){ // Output a string
-				if(*tokitr == "s_rparen"){ // Check if output stmt closed
-					tokitr++; lexitr++;
-					return true;
-				}
-			}
+			cout << "Failed expression." << endl;
 		}
+		else if(*tokitr == "t_string"){ // Output a string
+			tokitr++; lexitr++;
+			if(*tokitr == "s_rparen"){ // Check if output stmt closed
+				tokitr++; lexitr++;
+				return true;
+			}
+			cout << "Failed string." << endl;
+		}
+		cout << "Failed expr or string check." << endl;
 	}
+	cout << "output failed" << endl;
 	return false;
 }
 
@@ -318,16 +342,24 @@ bool SyntaxAnalyzer::expr(){
 		return false;
 	}
 }
-
+//Written by Chris Logan
 bool SyntaxAnalyzer::simpleexpr(){
-	// Structure: TERM {ARITHOP | RELOP TERM}
-	// meaning one of 4 things at minimum. Let's use some ints as an example:
-	// 1) 2 			TERM (with Empty Set)
-	// 2) 3 / 3 		TERM ARITHOP TERM
-	// 3) 4 == 4 		TERM RELOP TERM
-	// 4) 5 + 5 == 10	TERM ARITHOP TERM RELOP TERM (Multiple terms allowed due to curly brackets)
-	// A TERM could also be an EXPR, but I suppose we just treat this as, for lack of a better word, one term?
-	// Treat, say, the TERM 10 as equivalent to the EXPR (5 + 5), for example?
+    if(term()){
+        if(arithop()){
+            if(term()){
+                return true;
+            }
+            else{
+                return false;
+            }
+        }
+        else{
+            return true;
+        }
+    }
+    else{
+        return false;
+    }
 
 	return false;
 }
@@ -336,6 +368,7 @@ bool SyntaxAnalyzer::term(){
     if ((*tokitr == "t_int")
 	|| (*tokitr == "t_str")
 	|| (*tokitr == "t_id")){
+    	if(*tokitr == "t_id" && haveVariable() == 0) return false;
     	tokitr++; lexitr++;
     	return true;
     }
@@ -350,7 +383,7 @@ bool SyntaxAnalyzer::term(){
         }
     return false;
 }
-
+// I think this has yet to be implemented. Should be in the EXPR method, I think, according to the grammar.
 bool SyntaxAnalyzer::logicop(){
     if ((*tokitr == "s_and") || (*tokitr == "s_or")){
         tokitr++; lexitr++;
@@ -379,6 +412,15 @@ bool SyntaxAnalyzer::relop(){
     else
     	return false;
 }
+
+// Written by Matthew Manuel
+// Check if variable has been declared and is in the symbol table
+int SyntaxAnalyzer::haveVariable(){
+	if(symboltable.count(*lexitr) == 0){
+		return 0;
+	}
+}
+
 std::istream& SyntaxAnalyzer::getline_safe(std::istream& input, std::string& output)
 {
     char c;
@@ -398,6 +440,7 @@ std::istream& SyntaxAnalyzer::getline_safe(std::istream& input, std::string& out
 }
 
 int main(){
+	cout << "Begin program" << endl;
     ifstream infile("lexemes.txt");
     SyntaxAnalyzer sa(infile);
     sa.parse();
