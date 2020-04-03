@@ -38,7 +38,7 @@ class SyntaxAnalyzer{
         bool logicop();
         bool arithop();
         bool relop();
-        int haveVariable();
+        bool haveVariable(); // Written by Matthew Manuel. Called by Chris Logan
         std::istream& getline_safe(std::istream& input, std::string& output);
     public:
         SyntaxAnalyzer(istream& infile);
@@ -59,14 +59,19 @@ SyntaxAnalyzer::SyntaxAnalyzer(istream& infile){
     int pos;
     getline_safe(infile, line);
     bool valid = true;
-    while(!infile.eof() && (valid)){
-        pos = line.find(":");
-        tok = line.substr(0, pos-1);
-        lex = line.substr(pos+2, line.length());
-        cout << pos << " " << tok << " " << lex << endl;
-        tokens.push_back(tok);
-        lexemes.push_back(lex);
-        getline_safe(infile, line);
+    while(!infile.eof() && valid){
+    	if(line == ""){ // Matthew Manuel: Skips empty line in middle of file
+    		getline_safe(infile, line);
+    	}
+    	else{
+    		pos = line.find(":");
+    		tok = line.substr(0, pos-1);
+    		lex = line.substr(pos+2, line.length());
+    		cout << pos << " " << tok << " " << lex << endl;
+    		tokens.push_back(tok);
+    		lexemes.push_back(lex);
+    		getline_safe(infile, line);
+    	}
     }
     tokitr = tokens.begin();
     lexitr = lexemes.begin();
@@ -78,6 +83,7 @@ bool SyntaxAnalyzer::parse(){
             tokitr++;
             lexitr++;
             if (tokitr!=tokens.end() && stmtlist()){
+            	cout << *tokitr << endl;
                 if (tokitr!=tokens.end())
                 	if (*tokitr == "t_end"){
                 		tokitr++; lexitr++;
@@ -113,7 +119,8 @@ bool SyntaxAnalyzer::parse(){
 bool SyntaxAnalyzer::vdec(){
 
     if (*tokitr != "t_var")
-        return true;
+		if(*tokitr == "t_begin") return true;
+		else return false; // Matthew Manuel: Incomplete var list
     else{
         tokitr++; lexitr++;
         int result = 0;   // 0 - valid, 1 - done, 2 - error
@@ -143,7 +150,7 @@ int SyntaxAnalyzer::vars(){
         temp = "t_string";
         tokitr++; lexitr++;
     }
-    else
+    else // End of var declarations
         return 1;
     bool semihit = false;
     while (tokitr != tokens.end() && result == 0 && !semihit){
@@ -190,13 +197,12 @@ int SyntaxAnalyzer::stmt(){
         else return 0;
     }
     else if (*tokitr == "t_id"){  // assignment starts with identifier
-		haveVariable();
         tokitr++; lexitr++;
+        cout << "t_id" << endl;
         if (assignstmt()) return 1;
         else return 0;
     }
     else if (*tokitr == "t_input"){
-    	haveVariable();
         tokitr++; lexitr++;
         if (inputstmt()) return 1;
         else return 0;
@@ -211,7 +217,7 @@ int SyntaxAnalyzer::stmt(){
 }
 
 bool SyntaxAnalyzer::ifstmt(){
-	if(*tokitr == "s_lparent"){
+	if(*tokitr == "s_lparen"){
 		tokitr++; lexitr++;
 		if(expr()){
 			if(*tokitr == "s_rparen"){
@@ -257,12 +263,12 @@ bool SyntaxAnalyzer::whilestmt(){
                 if(*tokitr == "t_loop"){ //actual loop part
                     tokitr++; lexitr++;
                     if(stmtlist()){
-                        tokitr++; lexitr++;
+                        tokitr++; lexitr++; // I would suggest removing the increments! Causes an error; goes one symbol too far
                         if(*tokitr == "t_end"){ //end statement
                             tokitr++; lexitr++;
                             if(*tokitr == "t_loop"){ //end of loop
                                 tokitr++; lexitr++;
-                                return false;
+                                return false; // Is it supposed to return false here?
                             }
                         }
                     }
@@ -270,7 +276,7 @@ bool SyntaxAnalyzer::whilestmt(){
             }
         }
     }
-	return true;
+    return true;
 	// write this function
 }
 
@@ -285,9 +291,9 @@ bool SyntaxAnalyzer::assignstmt(){
 			}
 		}
 	}
-	cout << "Assignment failed." << endl;
 	return false;
 }
+
 bool SyntaxAnalyzer::inputstmt(){
     if (*tokitr == "s_lparen"){
         tokitr++; lexitr++;
@@ -311,7 +317,6 @@ bool SyntaxAnalyzer::outputstmt(){
 				tokitr++; lexitr++;
 				return true;
 			}
-			cout << "Failed expression." << endl;
 		}
 		else if(*tokitr == "t_string"){ // Output a string
 			tokitr++; lexitr++;
@@ -319,24 +324,22 @@ bool SyntaxAnalyzer::outputstmt(){
 				tokitr++; lexitr++;
 				return true;
 			}
-			cout << "Failed string." << endl;
 		}
-		cout << "Failed expr or string check." << endl;
 	}
-	cout << "output failed" << endl;
 	return false;
 }
 
 bool SyntaxAnalyzer::expr(){
     if (simpleexpr()){
-		if (relop()){
+		if (logicop()){
 			if (simpleexpr())
 				return true;
 			else
 				return false;
 		}
-		else
+		else{ // Only one simpleexpr
 			return true;
+		}
 	}
 	else{
 		return false;
@@ -345,7 +348,7 @@ bool SyntaxAnalyzer::expr(){
 //Written by Chris Logan
 bool SyntaxAnalyzer::simpleexpr(){
     if(term()){
-        if(arithop()){
+        if(arithop()){ // I would add relop here as an or statement to complete the grammar!
             if(term()){
                 return true;
             }
@@ -360,7 +363,6 @@ bool SyntaxAnalyzer::simpleexpr(){
     else{
         return false;
     }
-
 	return false;
 }
 
@@ -368,11 +370,10 @@ bool SyntaxAnalyzer::term(){
     if ((*tokitr == "t_int")
 	|| (*tokitr == "t_str")
 	|| (*tokitr == "t_id")){
-    	if(*tokitr == "t_id" && haveVariable() == 0) return false;
     	tokitr++; lexitr++;
     	return true;
     }
-    else
+    else{ // Check if expr
         if (*tokitr == "s_lparen"){
             tokitr++; lexitr++;
             if (expr())
@@ -381,9 +382,10 @@ bool SyntaxAnalyzer::term(){
                     return true;
                 }
         }
+    }
     return false;
 }
-// I think this has yet to be implemented. Should be in the EXPR method, I think, according to the grammar.
+
 bool SyntaxAnalyzer::logicop(){
     if ((*tokitr == "s_and") || (*tokitr == "s_or")){
         tokitr++; lexitr++;
@@ -414,11 +416,13 @@ bool SyntaxAnalyzer::relop(){
 }
 
 // Written by Matthew Manuel
+// Called by Chris Logan. Collaborated via text on placement.
 // Check if variable has been declared and is in the symbol table
-int SyntaxAnalyzer::haveVariable(){
+bool SyntaxAnalyzer::haveVariable(){
 	if(symboltable.count(*lexitr) == 0){
-		return 0;
+		return false;
 	}
+	return true;
 }
 
 std::istream& SyntaxAnalyzer::getline_safe(std::istream& input, std::string& output)
