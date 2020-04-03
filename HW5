@@ -348,23 +348,29 @@ bool SyntaxAnalyzer::expr(){
 }
 //Written by Chris Logan
 bool SyntaxAnalyzer::simpleexpr(){
-    if(term()){
-        if(arithop() || relop()){ //tests for either arithop or relop
-            if(term()){
-                return true;
-            }
-            else{
+    if(term()){//begin term
+        while(arithop() || relop()){ //begin while
+            if(!term()){
                 return false;
             }
-        }
-        else{
             return true;
-        }
-    }
+            if(arithop() || relop()){ //added just in case program contains multiple addition signs (2 + 2 + 2)
+                if(term()){
+                    return true;
+                }
+                else{
+                    return false;
+                }
+            }
+            else{
+                return true;
+            }
+        }//end while
+    }//end term
     else{
         return false;
     }
-	return false;
+    return false;
 }
 
 bool SyntaxAnalyzer::term(){
