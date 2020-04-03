@@ -269,7 +269,7 @@ bool SyntaxAnalyzer::whilestmt(){
                             tokitr++; lexitr++;
                             if(*tokitr == "t_loop"){ //end loop
                                 tokitr++; lexitr++;
-                                return false;
+                                return true;
                             }
                         }
                     }
