@@ -192,14 +192,14 @@ int SyntaxAnalyzer::stmt(){
         else return 0;
     }
     else if (*tokitr == "t_id"){  // assignment starts with identifier
-        if(!haveVariable()) {return 0;}
+        if(!haveVariable()) {return 0;} // Placed by Chris Logan
         tokitr++; lexitr++;
         cout << "t_id" << endl;
         if (assignstmt()) return 1;
         else return 0;
     }
     else if (*tokitr == "t_input"){
-        if(!haveVariable()){return 0;}
+        if(!haveVariable()){return 0;} // Placed by Chris Logan
         tokitr++; lexitr++;
         if (inputstmt()) return 1;
         else return 0;
@@ -361,7 +361,7 @@ bool SyntaxAnalyzer::term(){
     if ((*tokitr == "t_int")
 	|| (*tokitr == "t_str")
 	|| (*tokitr == "t_id")){
-	    if(*tokitr == "t_id" && !haveVariable()){return false;}
+	    if(*tokitr == "t_id" && !haveVariable()){return false;} // Placed by Chris Logan
     	tokitr++; lexitr++;
     	return true;
     }
@@ -421,7 +421,6 @@ std::istream& SyntaxAnalyzer::getline_safe(std::istream& input, std::string& out
 {
     char c;
     output.clear();
-
     input.get(c);
     while (input && c != '\n')
     {
@@ -431,7 +430,6 @@ std::istream& SyntaxAnalyzer::getline_safe(std::istream& input, std::string& out
         }
         input.get(c);
     }
-
     return input;
 }
 
