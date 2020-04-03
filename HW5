@@ -197,12 +197,14 @@ int SyntaxAnalyzer::stmt(){
         else return 0;
     }
     else if (*tokitr == "t_id"){  // assignment starts with identifier
+        if(!haveVariable()) {return 0;}
         tokitr++; lexitr++;
         cout << "t_id" << endl;
         if (assignstmt()) return 1;
         else return 0;
     }
     else if (*tokitr == "t_input"){
+        if(!haveVariable()){return 0;}
         tokitr++; lexitr++;
         if (inputstmt()) return 1;
         else return 0;
@@ -349,23 +351,13 @@ bool SyntaxAnalyzer::expr(){
 //Written by Chris Logan
 bool SyntaxAnalyzer::simpleexpr(){
     if(term()){//begin term
+        //checks for multiple instances of numbers or mathematical symbols
         while(arithop() || relop()){ //begin while
             if(!term()){
                 return false;
             }
-            return true;
-            if(arithop() || relop()){ //added just in case program contains multiple addition signs (2 + 2 + 2)
-                if(term()){
-                    return true;
-                }
-                else{
-                    return false;
-                }
-            }
-            else{
-                return true;
-            }
         }//end while
+        return true;
     }//end term
     else{
         return false;
@@ -377,6 +369,7 @@ bool SyntaxAnalyzer::term(){
     if ((*tokitr == "t_int")
 	|| (*tokitr == "t_str")
 	|| (*tokitr == "t_id")){
+	    if(*tokitr == "t_id" && !haveVariable()){return false;}
     	tokitr++; lexitr++;
     	return true;
     }
