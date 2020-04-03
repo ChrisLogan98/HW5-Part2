@@ -60,18 +60,13 @@ SyntaxAnalyzer::SyntaxAnalyzer(istream& infile){
     getline_safe(infile, line);
     bool valid = true;
     while(!infile.eof() && valid){
-    	if(line == ""){ // Matthew Manuel: Skips empty line in middle of file
-    		getline_safe(infile, line);
-    	}
-    	else{
-    		pos = line.find(":");
-    		tok = line.substr(0, pos-1);
-    		lex = line.substr(pos+2, line.length());
-    		cout << pos << " " << tok << " " << lex << endl;
-    		tokens.push_back(tok);
-    		lexemes.push_back(lex);
-    		getline_safe(infile, line);
-    	}
+    	pos = line.find(":");
+    	tok = line.substr(0, pos-1);
+    	lex = line.substr(pos+2, line.length());
+    	cout << pos << " " << tok << " " << lex << endl;
+    	tokens.push_back(tok);
+    	lexemes.push_back(lex);
+    	getline_safe(infile, line);
     }
     tokitr = tokens.begin();
     lexitr = lexemes.begin();
@@ -197,12 +192,14 @@ int SyntaxAnalyzer::stmt(){
         else return 0;
     }
     else if (*tokitr == "t_id"){  // assignment starts with identifier
+        if(!haveVariable()) {return 0;}
         tokitr++; lexitr++;
         cout << "t_id" << endl;
         if (assignstmt()) return 1;
         else return 0;
     }
     else if (*tokitr == "t_input"){
+        if(!haveVariable()){return 0;}
         tokitr++; lexitr++;
         if (inputstmt()) return 1;
         else return 0;
@@ -216,7 +213,7 @@ int SyntaxAnalyzer::stmt(){
     return 2;  //stmtlist can be null
 }
 
-bool SyntaxAnalyzer::ifstmt(){
+bool SyntaxAnalyzer::ifstmt(){ //written in class
 	if(*tokitr == "s_lparen"){
 		tokitr++; lexitr++;
 		if(expr()){
@@ -260,15 +257,14 @@ bool SyntaxAnalyzer::whilestmt(){
         if(expr()){ //conditions for while
             if(*tokitr == "s_rparen"){ //encloses EXPR
                 tokitr++; lexitr++;
-                if(*tokitr == "t_loop"){ //actual loop part
+                if(*tokitr == "t_loop"){ //begin loop
                     tokitr++; lexitr++;
                     if(stmtlist()){
-                        tokitr++; lexitr++; // I would suggest removing the increments! Causes an error; goes one symbol too far
                         if(*tokitr == "t_end"){ //end statement
                             tokitr++; lexitr++;
-                            if(*tokitr == "t_loop"){ //end of loop
+                            if(*tokitr == "t_loop"){ //end loop
                                 tokitr++; lexitr++;
-                                return false; // Is it supposed to return false here?
+                                return true;
                             }
                         }
                     }
@@ -276,8 +272,7 @@ bool SyntaxAnalyzer::whilestmt(){
             }
         }
     }
-    return true;
-	// write this function
+    return false;
 }
 
 // Written by Matthew Manuel
@@ -331,7 +326,7 @@ bool SyntaxAnalyzer::outputstmt(){
 
 bool SyntaxAnalyzer::expr(){
     if (simpleexpr()){
-		if (logicop()){
+		if (logicop()){ //relop was here instead of logicop
 			if (simpleexpr())
 				return true;
 			else
@@ -347,29 +342,26 @@ bool SyntaxAnalyzer::expr(){
 }
 //Written by Chris Logan
 bool SyntaxAnalyzer::simpleexpr(){
-    if(term()){
-        if(arithop()){ // I would add relop here as an or statement to complete the grammar!
-            if(term()){
-                return true;
-            }
-            else{
+    if(term()){//begin term
+        //checks for multiple instances of numbers or mathematical symbols
+        while(arithop() || relop()){ //begin while
+            if(!term()){
                 return false;
             }
-        }
-        else{
-            return true;
-        }
-    }
+        }//end while
+        return true;
+    }//end term
     else{
         return false;
     }
-	return false;
+    return false;
 }
 
 bool SyntaxAnalyzer::term(){
     if ((*tokitr == "t_int")
 	|| (*tokitr == "t_str")
 	|| (*tokitr == "t_id")){
+	    if(*tokitr == "t_id" && !haveVariable()){return false;}
     	tokitr++; lexitr++;
     	return true;
     }
@@ -386,7 +378,7 @@ bool SyntaxAnalyzer::term(){
     return false;
 }
 
-bool SyntaxAnalyzer::logicop(){
+bool SyntaxAnalyzer::logicop(){ //this was not called in EXPR for some reason
     if ((*tokitr == "s_and") || (*tokitr == "s_or")){
         tokitr++; lexitr++;
         return true;
@@ -446,6 +438,10 @@ std::istream& SyntaxAnalyzer::getline_safe(std::istream& input, std::string& out
 int main(){
 	cout << "Begin program" << endl;
     ifstream infile("lexemes.txt");
+    if(!infile){
+        cout << "ERROR - FILE NOT FOUND" << endl;
+        cout << "PLEASE CHECK if file is valid" << endl;
+    }
     SyntaxAnalyzer sa(infile);
     sa.parse();
     return 1;
